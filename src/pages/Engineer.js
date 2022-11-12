@@ -1,10 +1,11 @@
 import MaterialTable from "@material-table/core";
 import { ExportCsv, ExportPdf } from "@material-table/exporters";
-import { Modal } from "@material-ui/core";
+import { Modal, ModalHeader } from "react-bootstrap";
 import { useState } from "react";
+
 import Sidebar from "../components/Sidebar";
 import Widget from "../components/Widgets";
-const lookup = { true: "Available", false: "Unavailable" };
+
 const columns = [
   {
     title: "ID",
@@ -120,9 +121,9 @@ function Engineer() {
             backdrop="static"
             centered
           >
-            <Modal.Header closeButton>
+            <ModalHeader closeButton>
               <Modal.Title>UPDATE TICKET</Modal.Title>
-            </Modal.Header>
+            </ModalHeader>
             <Modal.Body>
               <form>
                 <div className="p-1">
