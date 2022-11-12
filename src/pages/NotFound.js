@@ -1,0 +1,24 @@
+import { useNavigate } from "react-router-dom";
+import Not from "../images/Not.svg";
+function NotFound() {
+  const navigate = useNavigate();
+
+  const goBack = () => {
+    navigate(-1);
+  };
+  return (
+    <div className="bg-light vh-100 d-flex justify-content-center align-items-center ">
+      <div>
+        <h1>Not Found</h1>
+        <img src={Not}></img>
+        <p className="lead fw-bolder m-1">
+          hmm.. The page you are looking for does not exist
+        </p>
+        <button className="btn btn-info text-white m-1" onClick={goBack}>
+          Go Back
+        </button>
+      </div>
+    </div>
+  );
+}
+export default NotFound;
