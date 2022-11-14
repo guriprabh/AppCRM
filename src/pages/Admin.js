@@ -5,7 +5,7 @@ import Sidebar from "../components/Sidebar";
 import { useEffect, useState } from "react";
 import Widget from "../components/Widgets";
 import { fetchTicket, ticketUpdation } from "../api/tickets";
-import { getAllUser, updateUserData } from "../api/tickets";
+import { getAllUser, updateUserData } from "../api/user";
 
 import { Modal, Button } from "react-bootstrap";
 const lookup = { true: "Available", false: "Unavailable" };
@@ -35,14 +35,14 @@ const columns = [
 const userColumns = [
   {
     title: "ID",
-    field: "id",
+    field: "userid",
   },
   { title: "NAME", field: "name" },
   { title: "EMAIL", field: "email" },
   { title: "ROLE", field: "userTypes" },
   {
     title: "STATUS",
-    field: "status",
+    field: "userstatus",
     lookup: {
       APPROVED: "APPROVED",
       REJECTED: "REJECTED",
@@ -58,7 +58,7 @@ function Admin() {
   const [selectedCurrTicket, setSelectedCurrTicket] = useState({});
 
   const [userList, setUserList] = useState([]);
-  const [userDetails, setUserDetails] = useState([]);
+  const [userDetail, setUserDetail] = useState({});
   const [userUpdationModal, setUserUpdationModal] = useState(false);
   const [selectedCurrUser, setSelectedCurrUser] = useState({});
 
@@ -73,11 +73,14 @@ function Admin() {
   const showUserModal = () => setUserModal(true);
   const closeUserModal = () => {
     setUserModal(false);
-    // setUserDetail({});
+    setUserDetail({});
   };
 
   useEffect(() => {
-    fetchTickets();
+    (async () => {
+      fetchUsers("");
+      fetchTickets();
+    })();
   }, []);
 
   const fetchTickets = () => {
@@ -91,59 +94,32 @@ function Admin() {
       });
   };
 
-  //   const fetchUsers=(userId)=>{
-  //     getAllUser(userId)
-  //   }.then(function (response) {
-  //     if (response.status === 200) {
-  //       if (userId) {
-  //         setUserDetail(response.data[0]);
-  //         showUserModal();
-  //       } else setUserList(response.data);
-  //     }
-  //   })
-  //   .catch(function (error) {
-  //     console.log(error);
-  //   });
-  // };
-  // const updateUserDetail = () => {
-  //   const data = {
-  //     userType: userDetail.userTypes,
-  //     userStatus: userDetail.userStatus,
-  //     userName: userDetail.name,
-  //   };
-  //   updateUserData(userDetail.userId, data)
-  //     .then(function (response) {
-  //       if (response.status === 200) {
-  //         setMessage(response.message);
-  //         let idx = userList.findIndex(
-  //           (obj) => obj.userId === userDetail.userId
-  //         );
-  //         userList[idx] = userDetail;
-  //         closeUserModal();
-  //         setMessage("User detail updated successfully");
-  //       }
-  //     })
-  //     .catch(function (error) {
-  //       if (error.status === 400) setMessage(error.message);
-  //       else console.log(error);
-  //     });
-  // };
-
-  // const changeUserDetail = (e) => {
-  //   if (e.target.name === "status") userDetail.userStatus = e.target.value;
-  //   else if (e.target.name === "name") userDetail.name = e.target.value;
-  //   else if (e.target.name === "type") userDetail.userTypes = e.target.value;
-  //   setUserDetail(userDetail);
-  //   setUserModal(e.target.value);
-  // };
+  const fetchUsers = (userId) => {
+    getAllUser(userId)
+      .then(function (response) {
+        if (response.status === 200) {
+          if (userId) {
+            setUserDetail(response.data[0]);
+            showUserModal();
+          } else setUserList(response.data);
+          console.log("fetchUsers => ", response.data);
+        }
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+  };
 
   const updateTicketCount = (tickets) => {
+    // filling this empty object with the ticket counts
+    // Segrating the tickets in 4 properties according to the status of the tickets
     const data = {
       open: 0,
       closed: 0,
       progress: 0,
       blocked: 0,
     };
+
     tickets.forEach((x) => {
       if (x.status === "OPEN") {
         data.open += 1;
@@ -159,6 +135,55 @@ function Admin() {
     setTicketStatusCount(Object.assign({}, data));
   };
 
+  const onTicketUpdate = (e) => {
+    if (e.target.name === "ticketPriority")
+      selectedCurrTicket.ticketPriority = e.target.value;
+    else if (e.target.name === "status")
+      selectedCurrTicket.status = e.target.value;
+    else if (e.target.name === "description")
+      selectedCurrTicket.description = e.target.value;
+
+    updateSelectedCurrTicket(Object.assign({}, selectedCurrTicket));
+  };
+
+  const updateTicket = (e) => {
+    e.preventDefault();
+    ticketUpdation(selectedCurrTicket.id, selectedCurrTicket)
+      .then(function (response) {
+        // closing the modal
+        setTicketUpdationModal(false);
+        // fetching the tickets again to update the table and the widgets
+        fetchTickets();
+      })
+      .catch(function (error) {
+        setMessage(error.response.data.message);
+      });
+  };
+
+  const updateUserDetail = () => {
+    const data = {
+      userType: userDetail.userTypes,
+      userStatus: userDetail.userStatus,
+      userName: userDetail.name,
+    };
+    updateUserData(userDetail.userId, data)
+      .then(function (response) {
+        if (response.status === 200) {
+          setMessage(response.message);
+          let idx = userList.findIndex(
+            (obj) => obj.userId === userDetail.userId
+          );
+          userList[idx] = userDetail;
+          closeUserModal();
+          setMessage("User detail updated successfully");
+        }
+      })
+      .catch(function (error) {
+        if (error.status === 400) setMessage(error.message);
+        else console.log(error);
+      });
+  };
+
   const editTicket = (ticketDetail) => {
     const ticket = {
       assignee: ticketDetail.assignee,
@@ -169,35 +194,16 @@ function Admin() {
       status: ticketDetail.status,
       ticketPriority: ticketDetail.ticketPriority,
     };
-
-    console.log("selected ticket", ticketDetail);
     setTicketUpdationModal(true);
     setSelectedCurrTicket(ticket);
   };
 
-  const onTicketUpdate = (e) => {
-    if (e.target.name === "ticketPriority")
-      selectedCurrTicket.ticketPriority = e.target.value;
-    else if (e.target.name === "status")
-      selectedCurrTicket.status = e.target.value;
-    else if (e.target.name === "description")
-      selectedCurrTicket.description = e.target.value;
-
-    updateSelectedCurrTicket(Object.assign({}, selectedCurrTicket));
-    console.log(selectedCurrTicket);
-  };
-
-  const updateTicket = (e) => {
-    e.preventDefault();
-    ticketUpdation(selectedCurrTicket.id, selectedCurrTicket)
-      .then(function (response) {
-        console.log(response);
-        setTicketUpdationModal(false);
-        fetchTickets();
-      })
-      .catch(function (error) {
-        console.log(error);
-      });
+  const changeUserDetail = (e) => {
+    if (e.target.name === "status") userDetail.userStatus = e.target.value;
+    else if (e.target.name === "name") userDetail.name = e.target.value;
+    else if (e.target.name === "type") userDetail.userTypes = e.target.value;
+    setUserDetail(userDetail);
+    setUserModal(e.target.value);
   };
 
   return (
@@ -394,43 +400,66 @@ function Admin() {
           </Modal>
         ) : null}
 
-        {userUpdationModal ? (
+        {userModal ? (
           <Modal
-            show={userUpdationModal}
-            onHide={closeTicketUpdationModal}
+            show={userModal}
+            onHide={closeUserModal}
             backdrop="static"
+            keyboard={false}
             centered
             className="shadow-lg"
           >
             <Modal.Header closeButton>
-              <Modal.Title>Update User Details</Modal.Title>
+              <Modal.Title>Edit Details</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-              <form
-              // onSubmit={updateUser}
-              >
+              <form onSubmit={updateUserDetail}>
                 <div>
-                  <h5 className="card-subtitle mb-2 text-danger"> User ID:</h5>
+                  <h5 className="card-subtitle mb-2 text-danger">
+                    {" "}
+                    User ID:{userDetail.userId}
+                  </h5>
                 </div>
                 <div className="input-group mb-2">
                   <label className="label input-group-text label-md">
                     Name
                   </label>
-                  <input type="text" disabled className="form-control"></input>
+                  <input
+                    type="text"
+                    disabled
+                    className="form-control"
+                    value={userDetail.name}
+                  ></input>
                 </div>
 
                 <div className="input-group mb-2">
                   <label className="label input-group-text label-md">
                     Email
                   </label>
-                  <input type="text" disabled className="form-control"></input>
+                  <input
+                    type="text"
+                    disabled
+                    className="form-control"
+                    value={userDetail.email}
+                    onChange={changeUserDetail}
+                  ></input>
                 </div>
 
                 <div className="input-group mb-2">
                   <label className="label input-group-text label-md">
-                    Role
+                    Type
                   </label>
-                  <input type="text" disabled className="form-control"></input>
+
+                  <select
+                    type="text"
+                    disabled
+                    className="form-control"
+                    value={userDetail.userTypes}
+                  >
+                    <option value="ADMIN">ADMIN</option>
+                    <option value="CUSTOMER">CUSTOMER</option>
+                    <option value="ENGINEER">ENGINEER</option>
+                  </select>
                 </div>
 
                 <div className="input-group mb-2">
@@ -440,8 +469,8 @@ function Admin() {
                   <select
                     className="form-select"
                     name="status"
-                    // value={selectedCurrTicket.status}
-                    // onChange={onTicketUpdate}
+                    value={userDetail.userStatus}
+                    onChange={changeUserDetail}
                   >
                     <option value="APPROVED">APPROVED</option>
                     <option value="PENDING">PENDING</option>
@@ -453,11 +482,16 @@ function Admin() {
                   <Button
                     variant="secondary"
                     className="m-1"
-                    onClick={() => closeTicketUpdationModal}
+                    onClick={() => closeUserModal}
                   >
-                    Cancel
+                    Close
                   </Button>
-                  <Button varient="danger" className="m-1" type="submit">
+                  <Button
+                    varient="danger"
+                    className="m-1"
+                    type="submit"
+                    onClick={() => updateUserDetail()}
+                  >
                     Update
                   </Button>
                 </div>
@@ -469,8 +503,10 @@ function Admin() {
         <hr />
 
         <MaterialTable
+          onRowClick={(event, rowData) => fetchUsers(rowData.userId)}
           title="USER DETAILS"
           columns={userColumns}
+          data={userList}
           options={{
             filtering: true,
             headerStyle: {

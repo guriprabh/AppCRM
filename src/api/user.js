@@ -14,7 +14,7 @@ export async function getAllUser(userId) {
     }
   );
 }
-export async function userUpdation(userId, selectedCurrUser) {
+export async function updateUserData(userId, selectedCurrUser) {
   return await axios.put(
     `${BASE_URL}/crm/api/v1/users/${userId}`,
     selectedCurrUser,
